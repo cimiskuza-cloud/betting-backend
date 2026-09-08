@@ -335,7 +335,73 @@ ledger.push = (...entries) => {
 
 const db = { users, events, bets, ledger };
 
+async function ensureSchema() {
+  const client = await pool.connect();
+
+  try {
+    await client.query("BEGIN");
+    await client.query(`
+      CREATE TABLE IF NOT EXISTS users (
+        id TEXT PRIMARY KEY,
+        username TEXT NOT NULL UNIQUE,
+        password_hash TEXT NOT NULL,
+        balance NUMERIC NOT NULL DEFAULT 0,
+        kyc_status TEXT NOT NULL DEFAULT 'pending',
+        self_excluded_until TIMESTAMPTZ,
+        deposit_limit_daily NUMERIC,
+        created_at TIMESTAMPTZ NOT NULL
+      )
+    `);
+    await client.query(`
+      CREATE TABLE IF NOT EXISTS events (
+        id TEXT PRIMARY KEY,
+        league TEXT NOT NULL,
+        home TEXT NOT NULL,
+        away TEXT NOT NULL,
+        start_time TIMESTAMPTZ NOT NULL,
+        status TEXT NOT NULL,
+        markets JSONB NOT NULL,
+        result JSONB,
+        updated_at TIMESTAMPTZ NOT NULL
+      )
+    `);
+    await client.query(`
+      CREATE TABLE IF NOT EXISTS bets (
+        id TEXT PRIMARY KEY,
+        user_id TEXT NOT NULL REFERENCES users(id),
+        selections JSONB NOT NULL,
+        stake NUMERIC NOT NULL,
+        combined_odds NUMERIC NOT NULL,
+        potential_return NUMERIC NOT NULL,
+        status TEXT NOT NULL,
+        placed_at TIMESTAMPTZ NOT NULL
+      )
+    `);
+    await client.query(`
+      CREATE TABLE IF NOT EXISTS ledger (
+        id TEXT PRIMARY KEY,
+        timestamp TIMESTAMPTZ NOT NULL,
+        user_id TEXT NOT NULL REFERENCES users(id),
+        amount NUMERIC NOT NULL,
+        reason TEXT NOT NULL,
+        balance_after NUMERIC,
+        bet_id TEXT,
+        psp_reference TEXT,
+        metadata JSONB NOT NULL DEFAULT '{}'::jsonb
+      )
+    `);
+    await client.query("COMMIT");
+  } catch (error) {
+    await client.query("ROLLBACK");
+    throw error;
+  } finally {
+    client.release();
+  }
+}
+
 async function initializeStore() {
+  await ensureSchema();
+
   const [userRows, eventRows, betRows, ledgerRows] = await Promise.all([
     pool.query("SELECT * FROM users ORDER BY created_at ASC"),
     pool.query("SELECT * FROM events ORDER BY updated_at ASC"),
