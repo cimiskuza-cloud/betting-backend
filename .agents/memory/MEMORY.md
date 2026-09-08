@@ -1,0 +1,1 @@
+- [Replit port forwarding](replit-port-forwarding.md) — managed workflow restarts can remove manual `[[ports]]` mappings; verify persistence after restart.
