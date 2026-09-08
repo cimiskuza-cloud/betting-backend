@@ -1,0 +1,826 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Betting Exchange</title>
+    <style>
+      :root {
+        color-scheme: dark;
+        --bg: #0c1018;
+        --panel: #151c28;
+        --panel-raised: #1b2432;
+        --border: #2a3547;
+        --text: #f4f7fb;
+        --muted: #93a0b3;
+        --accent: #35d07f;
+        --accent-strong: #20b968;
+        --danger: #ff6b78;
+        --warning: #f8c45c;
+      }
+
+      * {
+        box-sizing: border-box;
+      }
+
+      body {
+        margin: 0;
+        min-width: 320px;
+        background: var(--bg);
+        color: var(--text);
+        font-family:
+          Inter, ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont,
+          "Segoe UI", sans-serif;
+        line-height: 1.5;
+      }
+
+      button,
+      input {
+        font: inherit;
+      }
+
+      button {
+        cursor: pointer;
+      }
+
+      .shell {
+        width: min(1160px, calc(100% - 32px));
+        margin: 0 auto;
+      }
+
+      header {
+        border-bottom: 1px solid var(--border);
+        background: rgba(12, 16, 24, 0.94);
+      }
+
+      .header-inner {
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        gap: 20px;
+        min-height: 76px;
+      }
+
+      .brand {
+        display: flex;
+        align-items: center;
+        gap: 12px;
+        letter-spacing: -0.02em;
+      }
+
+      .brand-mark {
+        display: grid;
+        width: 36px;
+        height: 36px;
+        place-items: center;
+        border-radius: 10px;
+        background: var(--accent);
+        color: #06150d;
+        font-weight: 900;
+      }
+
+      .brand-name {
+        font-size: 1.08rem;
+        font-weight: 800;
+      }
+
+      .session-status {
+        color: var(--muted);
+        font-size: 0.86rem;
+      }
+
+      main {
+        padding: 38px 0 64px;
+      }
+
+      .intro {
+        display: flex;
+        justify-content: space-between;
+        align-items: end;
+        gap: 24px;
+        margin-bottom: 28px;
+      }
+
+      h1,
+      h2,
+      p {
+        margin-top: 0;
+      }
+
+      h1 {
+        margin-bottom: 8px;
+        font-size: clamp(2rem, 4vw, 3rem);
+        line-height: 1.05;
+        letter-spacing: -0.045em;
+      }
+
+      h2 {
+        margin-bottom: 4px;
+        font-size: 1.18rem;
+      }
+
+      .subtitle,
+      .section-caption {
+        margin-bottom: 0;
+        color: var(--muted);
+      }
+
+      .layout {
+        display: grid;
+        grid-template-columns: minmax(0, 1fr) 330px;
+        gap: 20px;
+        align-items: start;
+      }
+
+      .panel {
+        border: 1px solid var(--border);
+        border-radius: 16px;
+        background: var(--panel);
+        box-shadow: 0 18px 48px rgba(0, 0, 0, 0.16);
+      }
+
+      .panel-heading {
+        padding: 20px 22px 16px;
+        border-bottom: 1px solid var(--border);
+      }
+
+      .events-panel {
+        min-width: 0;
+      }
+
+      .table-wrap {
+        overflow-x: auto;
+      }
+
+      table {
+        width: 100%;
+        border-collapse: collapse;
+        min-width: 580px;
+      }
+
+      th,
+      td {
+        padding: 16px 22px;
+        border-bottom: 1px solid rgba(42, 53, 71, 0.7);
+        text-align: left;
+        vertical-align: middle;
+      }
+
+      th {
+        color: var(--muted);
+        font-size: 0.75rem;
+        font-weight: 700;
+        letter-spacing: 0.08em;
+        text-transform: uppercase;
+      }
+
+      tbody tr:last-child td {
+        border-bottom: 0;
+      }
+
+      .teams {
+        font-weight: 700;
+      }
+
+      .league {
+        display: block;
+        margin-top: 3px;
+        color: var(--muted);
+        font-size: 0.8rem;
+        font-weight: 400;
+      }
+
+      .time {
+        color: var(--muted);
+        white-space: nowrap;
+      }
+
+      .odds {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 7px;
+      }
+
+      .odd-button {
+        min-width: 58px;
+        padding: 8px 10px;
+        border: 1px solid var(--border);
+        border-radius: 8px;
+        background: var(--panel-raised);
+        color: var(--text);
+        font-weight: 700;
+        transition:
+          border-color 0.15s ease,
+          background 0.15s ease,
+          transform 0.15s ease;
+      }
+
+      .odd-button:hover,
+      .odd-button:focus-visible {
+        border-color: var(--accent);
+        background: #223d32;
+        outline: none;
+        transform: translateY(-1px);
+      }
+
+      .odd-button.selected {
+        border-color: var(--accent);
+        background: var(--accent);
+        color: #06150d;
+      }
+
+      .empty-state,
+      .loading {
+        padding: 44px 22px;
+        color: var(--muted);
+        text-align: center;
+      }
+
+      .side-column {
+        display: grid;
+        gap: 20px;
+        position: sticky;
+        top: 20px;
+      }
+
+      .auth-panel,
+      .slip-panel {
+        padding: 20px;
+      }
+
+      .auth-tabs {
+        display: grid;
+        grid-template-columns: 1fr 1fr;
+        gap: 4px;
+        margin: 16px 0;
+        padding: 4px;
+        border-radius: 9px;
+        background: var(--bg);
+      }
+
+      .tab {
+        padding: 8px;
+        border: 0;
+        border-radius: 6px;
+        background: transparent;
+        color: var(--muted);
+      }
+
+      .tab.active {
+        background: var(--panel-raised);
+        color: var(--text);
+        font-weight: 700;
+      }
+
+      .field {
+        display: grid;
+        gap: 6px;
+        margin-bottom: 14px;
+      }
+
+      label {
+        color: var(--muted);
+        font-size: 0.82rem;
+        font-weight: 600;
+      }
+
+      input {
+        width: 100%;
+        padding: 10px 11px;
+        border: 1px solid var(--border);
+        border-radius: 8px;
+        background: var(--bg);
+        color: var(--text);
+        outline: none;
+      }
+
+      input:focus {
+        border-color: var(--accent);
+      }
+
+      .primary-button {
+        width: 100%;
+        padding: 11px 14px;
+        border: 0;
+        border-radius: 8px;
+        background: var(--accent);
+        color: #06150d;
+        font-weight: 800;
+        transition:
+          background 0.15s ease,
+          transform 0.15s ease;
+      }
+
+      .primary-button:hover:not(:disabled),
+      .primary-button:focus-visible:not(:disabled) {
+        background: var(--accent-strong);
+        outline: none;
+        transform: translateY(-1px);
+      }
+
+      button:disabled {
+        cursor: not-allowed;
+        opacity: 0.45;
+      }
+
+      .message {
+        min-height: 21px;
+        margin: 12px 0 0;
+        color: var(--muted);
+        font-size: 0.84rem;
+      }
+
+      .message.error {
+        color: var(--danger);
+      }
+
+      .message.success {
+        color: var(--accent);
+      }
+
+      .slip-list {
+        display: grid;
+        gap: 8px;
+        margin: 16px 0;
+        padding: 0;
+        list-style: none;
+      }
+
+      .slip-item {
+        display: flex;
+        justify-content: space-between;
+        gap: 10px;
+        padding: 10px;
+        border: 1px solid var(--border);
+        border-radius: 9px;
+        background: var(--panel-raised);
+      }
+
+      .slip-item-copy {
+        min-width: 0;
+      }
+
+      .slip-item-teams {
+        overflow: hidden;
+        text-overflow: ellipsis;
+        white-space: nowrap;
+        font-size: 0.84rem;
+        font-weight: 700;
+      }
+
+      .slip-item-detail {
+        color: var(--muted);
+        font-size: 0.76rem;
+      }
+
+      .remove-button {
+        align-self: center;
+        padding: 2px 5px;
+        border: 0;
+        background: transparent;
+        color: var(--muted);
+        font-size: 1.1rem;
+      }
+
+      .remove-button:hover {
+        color: var(--danger);
+      }
+
+      .slip-empty {
+        padding: 14px 0;
+        color: var(--muted);
+        font-size: 0.86rem;
+      }
+
+      .summary {
+        display: grid;
+        gap: 10px;
+        margin: 18px 0;
+        padding-top: 16px;
+        border-top: 1px solid var(--border);
+      }
+
+      .summary-row {
+        display: flex;
+        justify-content: space-between;
+        gap: 16px;
+        color: var(--muted);
+        font-size: 0.9rem;
+      }
+
+      .summary-row strong {
+        color: var(--text);
+      }
+
+      .stake-field {
+        margin-top: 2px;
+      }
+
+      @media (max-width: 850px) {
+        .layout {
+          grid-template-columns: 1fr;
+        }
+
+        .side-column {
+          position: static;
+          grid-template-columns: repeat(2, minmax(0, 1fr));
+        }
+      }
+
+      @media (max-width: 580px) {
+        .shell {
+          width: min(100% - 20px, 1160px);
+        }
+
+        .header-inner,
+        .intro {
+          align-items: flex-start;
+          flex-direction: column;
+        }
+
+        main {
+          padding-top: 24px;
+        }
+
+        .side-column {
+          grid-template-columns: 1fr;
+        }
+
+        th,
+        td {
+          padding-right: 14px;
+          padding-left: 14px;
+        }
+      }
+    </style>
+  </head>
+  <body>
+    <header>
+      <div class="shell header-inner">
+        <div class="brand">
+          <div class="brand-mark">B</div>
+          <div class="brand-name">Betting Exchange</div>
+        </div>
+        <div id="sessionStatus" class="session-status">Not signed in</div>
+      </div>
+    </header>
+
+    <main class="shell">
+      <div class="intro">
+        <div>
+          <h1>Find your next bet.</h1>
+          <p class="subtitle">Live event prices, clear odds, and a simple bet slip.</p>
+        </div>
+      </div>
+
+      <div class="layout">
+        <section class="panel events-panel" aria-labelledby="eventsHeading">
+          <div class="panel-heading">
+            <h2 id="eventsHeading">Upcoming events</h2>
+            <p class="section-caption">Select an outcome to add it to your bet slip.</p>
+          </div>
+          <div class="table-wrap">
+            <table>
+              <thead>
+                <tr>
+                  <th scope="col">Teams</th>
+                  <th scope="col">Time</th>
+                  <th scope="col">1X2 odds</th>
+                </tr>
+              </thead>
+              <tbody id="eventsBody">
+                <tr>
+                  <td colspan="3" class="loading">Loading events…</td>
+                </tr>
+              </tbody>
+            </table>
+          </div>
+          <p id="eventsMessage" class="message" role="status"></p>
+        </section>
+
+        <div class="side-column">
+          <section class="panel auth-panel" aria-labelledby="authHeading">
+            <h2 id="authHeading">Your account</h2>
+            <p class="section-caption">Sign in to place a bet.</p>
+
+            <div class="auth-tabs" role="tablist" aria-label="Account actions">
+              <button class="tab active" id="loginTab" type="button" role="tab">Login</button>
+              <button class="tab" id="registerTab" type="button" role="tab">Register</button>
+            </div>
+
+            <form id="authForm">
+              <div class="field">
+                <label for="username">Username</label>
+                <input id="username" name="username" autocomplete="username" required />
+              </div>
+              <div class="field">
+                <label for="password">Password</label>
+                <input
+                  id="password"
+                  name="password"
+                  type="password"
+                  autocomplete="current-password"
+                  required
+                />
+              </div>
+              <div class="field" id="dobField" hidden>
+                <label for="dateOfBirth">Date of birth</label>
+                <input id="dateOfBirth" name="dateOfBirth" type="date" />
+              </div>
+              <button class="primary-button" id="authSubmit" type="submit">Login</button>
+            </form>
+            <p id="authMessage" class="message" role="status"></p>
+          </section>
+
+          <section class="panel slip-panel" aria-labelledby="slipHeading">
+            <h2 id="slipHeading">Bet slip</h2>
+            <p class="section-caption">Your selections</p>
+            <div id="slipEmpty" class="slip-empty">Choose an odd to get started.</div>
+            <ul id="slipList" class="slip-list" hidden></ul>
+
+            <div class="summary">
+              <div class="summary-row">
+                <span>Combined odds</span>
+                <strong id="combinedOdds">—</strong>
+              </div>
+              <div class="field stake-field">
+                <label for="stake">Stake</label>
+                <input id="stake" type="number" min="1" step="0.01" placeholder="0.00" />
+              </div>
+              <div class="summary-row">
+                <span>Potential return</span>
+                <strong id="potentialReturn">—</strong>
+              </div>
+            </div>
+            <button class="primary-button" id="placeBet" type="button" disabled>Place bet</button>
+            <p id="slipMessage" class="message" role="status"></p>
+          </section>
+        </div>
+      </div>
+    </main>
+
+    <script>
+      let authToken = null;
+      let authMode = "login";
+      let events = [];
+      let slip = [];
+
+      const eventsBody = document.getElementById("eventsBody");
+      const eventsMessage = document.getElementById("eventsMessage");
+      const sessionStatus = document.getElementById("sessionStatus");
+      const authForm = document.getElementById("authForm");
+      const authMessage = document.getElementById("authMessage");
+      const authSubmit = document.getElementById("authSubmit");
+      const loginTab = document.getElementById("loginTab");
+      const registerTab = document.getElementById("registerTab");
+      const dobField = document.getElementById("dobField");
+      const dateOfBirth = document.getElementById("dateOfBirth");
+      const slipEmpty = document.getElementById("slipEmpty");
+      const slipList = document.getElementById("slipList");
+      const combinedOdds = document.getElementById("combinedOdds");
+      const stakeInput = document.getElementById("stake");
+      const potentialReturn = document.getElementById("potentialReturn");
+      const placeBetButton = document.getElementById("placeBet");
+      const slipMessage = document.getElementById("slipMessage");
+
+      function setMessage(element, text, type = "") {
+        element.textContent = text;
+        element.className = `message ${type}`.trim();
+      }
+
+      async function request(path, options = {}) {
+        const response = await fetch(path, options);
+        const body = await response.json().catch(() => ({}));
+        if (!response.ok) {
+          throw new Error(body.error || "Something went wrong.");
+        }
+        return body;
+      }
+
+      function formatEventTime(value) {
+        const date = new Date(value);
+        if (Number.isNaN(date.getTime())) return value;
+        return date.toLocaleString(undefined, {
+          month: "short",
+          day: "numeric",
+          hour: "2-digit",
+          minute: "2-digit",
+        });
+      }
+
+      function renderEvents() {
+        if (!events.length) {
+          eventsBody.innerHTML =
+            '<tr><td colspan="3" class="empty-state">No events are available right now.</td></tr>';
+          return;
+        }
+
+        eventsBody.innerHTML = events
+          .map((event) => {
+            const odds = event.markets?.["1x2"] || {};
+            const buttons = ["1", "X", "2"]
+              .map((pick) => {
+                const value = odds[pick];
+                if (value == null) return "";
+                const selected = slip.some(
+                  (selection) => selection.eventId === event.id && selection.pick === pick
+                );
+                return `<button class="odd-button${selected ? " selected" : ""}" type="button" data-event-id="${event.id}" data-pick="${pick}" data-odds="${value}">${pick} <span>${Number(value).toFixed(2)}</span></button>`;
+              })
+              .join("");
+
+            return `
+              <tr>
+                <td>
+                  <span class="teams">${escapeHtml(event.home)} vs ${escapeHtml(event.away)}</span>
+                  <span class="league">${escapeHtml(event.league || "Match")}</span>
+                </td>
+                <td class="time">${escapeHtml(formatEventTime(event.startTime))}</td>
+                <td><div class="odds">${buttons || "—"}</div></td>
+              </tr>
+            `;
+          })
+          .join("");
+      }
+
+      function escapeHtml(value) {
+        return String(value)
+          .replaceAll("&", "&amp;")
+          .replaceAll("<", "&lt;")
+          .replaceAll(">", "&gt;")
+          .replaceAll('"', "&quot;")
+          .replaceAll("'", "&#039;");
+      }
+
+      function renderSlip() {
+        const hasSelections = slip.length > 0;
+        slipEmpty.hidden = hasSelections;
+        slipList.hidden = !hasSelections;
+
+        slipList.innerHTML = slip
+          .map(
+            (selection) => `
+              <li class="slip-item">
+                <div class="slip-item-copy">
+                  <div class="slip-item-teams">${escapeHtml(selection.teams)}</div>
+                  <div class="slip-item-detail">${selection.pick} · ${Number(selection.odds).toFixed(2)}</div>
+                </div>
+                <button class="remove-button" type="button" aria-label="Remove selection" data-remove-event="${selection.eventId}">×</button>
+              </li>
+            `
+          )
+          .join("");
+
+        const odds = slip.reduce((total, selection) => total * Number(selection.odds), 1);
+        const stake = Number(stakeInput.value);
+        combinedOdds.textContent = hasSelections ? odds.toFixed(2) : "—";
+        potentialReturn.textContent =
+          hasSelections && stake > 0 ? (odds * stake).toFixed(2) : "—";
+        placeBetButton.disabled = !hasSelections || !authToken || !(stake > 0);
+      }
+
+      function updateSession(user) {
+        sessionStatus.textContent = user ? `Signed in as ${user.username}` : "Not signed in";
+        renderSlip();
+      }
+
+      function selectOdd(eventId, pick, odds) {
+        const event = events.find((item) => item.id === eventId);
+        if (!event) return;
+
+        slip = slip.filter((selection) => selection.eventId !== eventId);
+        slip.push({
+          eventId,
+          market: "1x2",
+          pick,
+          odds: Number(odds),
+          teams: `${event.home} vs ${event.away}`,
+        });
+        setMessage(slipMessage, "");
+        renderEvents();
+        renderSlip();
+      }
+
+      async function loadEvents() {
+        try {
+          events = await request("/api/events");
+          renderEvents();
+          setMessage(eventsMessage, "");
+        } catch (error) {
+          setMessage(eventsMessage, error.message, "error");
+          eventsBody.innerHTML =
+            '<tr><td colspan="3" class="empty-state">Unable to load events.</td></tr>';
+        }
+      }
+
+      async function login(username, password) {
+        const result = await request("/api/auth/login", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ username, password }),
+        });
+        authToken = result.token;
+        updateSession(result.user);
+      }
+
+      loginTab.addEventListener("click", () => {
+        authMode = "login";
+        loginTab.classList.add("active");
+        registerTab.classList.remove("active");
+        dobField.hidden = true;
+        dateOfBirth.required = false;
+        authSubmit.textContent = "Login";
+        setMessage(authMessage, "");
+      });
+
+      registerTab.addEventListener("click", () => {
+        authMode = "register";
+        registerTab.classList.add("active");
+        loginTab.classList.remove("active");
+        dobField.hidden = false;
+        dateOfBirth.required = true;
+        authSubmit.textContent = "Create account";
+        setMessage(authMessage, "");
+      });
+
+      authForm.addEventListener("submit", async (event) => {
+        event.preventDefault();
+        const form = new FormData(authForm);
+        const username = form.get("username").trim();
+        const password = form.get("password");
+        const dob = form.get("dateOfBirth");
+        authSubmit.disabled = true;
+        setMessage(authMessage, authMode === "register" ? "Creating account…" : "Signing in…");
+
+        try {
+          if (authMode === "register") {
+            await request("/api/auth/register", {
+              method: "POST",
+              headers: { "Content-Type": "application/json" },
+              body: JSON.stringify({ username, password, dateOfBirth: dob }),
+            });
+            await login(username, password);
+            setMessage(authMessage, "Account created and signed in.", "success");
+          } else {
+            await login(username, password);
+            setMessage(authMessage, "Signed in successfully.", "success");
+          }
+        } catch (error) {
+          setMessage(authMessage, error.message, "error");
+        } finally {
+          authSubmit.disabled = false;
+        }
+      });
+
+      eventsBody.addEventListener("click", (event) => {
+        const button = event.target.closest(".odd-button");
+        if (!button) return;
+        selectOdd(button.dataset.eventId, button.dataset.pick, button.dataset.odds);
+      });
+
+      slipList.addEventListener("click", (event) => {
+        const button = event.target.closest("[data-remove-event]");
+        if (!button) return;
+        slip = slip.filter((selection) => selection.eventId !== button.dataset.removeEvent);
+        renderEvents();
+        renderSlip();
+      });
+
+      stakeInput.addEventListener("input", renderSlip);
+
+      placeBetButton.addEventListener("click", async () => {
+        if (!authToken) {
+          setMessage(slipMessage, "Sign in before placing a bet.", "error");
+          return;
+        }
+
+        placeBetButton.disabled = true;
+        setMessage(slipMessage, "Placing bet…");
+        try {
+          await request("/api/bets", {
+            method: "POST",
+            headers: {
+              "Content-Type": "application/json",
+              Authorization: `Bearer ${authToken}`,
+            },
+            body: JSON.stringify({
+              selections: slip.map(({ eventId, market, pick }) => ({ eventId, market, pick })),
+              stake: Number(stakeInput.value),
+            }),
+          });
+          slip = [];
+          stakeInput.value = "";
+          renderEvents();
+          renderSlip();
+          setMessage(slipMessage, "Bet placed successfully.", "success");
+        } catch (error) {
+          setMessage(slipMessage, error.message, "error");
+          renderSlip();
+        }
+      });
+
+      loadEvents();
+      renderSlip();
+    </script>
+  </body>
+</html>

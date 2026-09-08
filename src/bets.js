@@ -1,0 +1,90 @@
+const { db, randomUUID, addLedgerEntry } = require("./store");
+const { HttpError } = require("./auth");
+const { adjustBalance } = require("./wallet");
+const { getEvent } = require("./events");
+
+const MAX_STAKE = 10000;
+const MIN_STAKE = 1;
+
+function placeBet(userId, { selections, stake }) {
+  if (!Array.isArray(selections) || selections.length === 0) {
+    throw new HttpError(400, "Zgjidhni të paktën një ndeshje.");
+  }
+  if (stake < MIN_STAKE || stake > MAX_STAKE) {
+    throw new HttpError(400, `Shuma duhet të jetë mes ${MIN_STAKE} dhe ${MAX_STAKE}.`);
+  }
+
+  const resolvedSelections = selections.map(({ eventId, market, pick }) => {
+    const event = getEvent(eventId);
+    if (event.status !== "scheduled" && event.status !== "live") {
+      throw new HttpError(409, `Eventi "${event.home} vs ${event.away}" nuk pranon më baste.`);
+    }
+    const odds = event.markets[market]?.[pick];
+    if (odds == null) {
+      throw new HttpError(400, "Zgjedhje e pavlefshme.");
+    }
+    return { eventId, market, pick, odds };
+  });
+
+  const combinedOdds = resolvedSelections.reduce((acc, s) => acc * s.odds, 1);
+  const potentialReturn = round2(combinedOdds * stake);
+
+  adjustBalance(userId, -stake, "bet_stake_hold");
+
+  const bet = {
+    id: randomUUID(),
+    userId,
+    selections: resolvedSelections,
+    stake,
+    combinedOdds: round2(combinedOdds),
+    potentialReturn,
+    status: "pending",
+    placedAt: new Date().toISOString(),
+  };
+  db.bets.set(bet.id, bet);
+  return bet;
+}
+
+function settleBetsForEvent(eventId) {
+  const event = getEvent(eventId);
+  if (!event.result) throw new HttpError(400, "Eventi nuk ka ende rezultat.");
+
+  const affected = [...db.bets.values()].filter(
+    (bet) => bet.status === "pending" && bet.selections.some((s) => s.eventId === eventId)
+  );
+
+  for (const bet of affected) {
+    const leg = bet.selections.find((s) => s.eventId === eventId);
+    const legWon = leg.market === event.result.market && leg.pick === event.result.outcome;
+
+    const allLegsResolved = bet.selections.every((s) => {
+      const e = db.events.get(s.eventId);
+      return e.status === "settled" || e.status === "finished";
+    });
+
+    if (!legWon) {
+      bet.status = "lost";
+      addLedgerEntry({ userId: bet.userId, betId: bet.id, reason: "bet_lost" });
+    } else if (allLegsResolved) {
+      bet.status = "won";
+      adjustBalance(bet.userId, bet.potentialReturn, "bet_payout", { betId: bet.id });
+      bet.status = "paid";
+    }
+
+    db.bets.persist(bet);
+  }
+
+  event.status = "settled";
+  db.events.persist(event);
+  return affected;
+}
+
+function listBetsForUser(userId) {
+  return [...db.bets.values()].filter((b) => b.userId === userId);
+}
+
+function round2(n) {
+  return Math.round(n * 100) / 100;
+}
+
+module.exports = { placeBet, settleBetsForEvent, listBetsForUser };
